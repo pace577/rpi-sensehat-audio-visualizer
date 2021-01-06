@@ -1,55 +1,64 @@
 import numpy as np
 from scipy import signal
 
-N = 2
-Wnl = 0.02
-bl, al = signal.butter(N, Wnl, btype="lowpass")
-Wnb = (0.02,0.05)
-bb, ab = signal.butter(N, Wnb, btype="bandpass")
-Wnh = 0.05
-bh, ah = signal.butter(N, Wnh, btype="highpass")
+# def filter_signal(input_signal, b, a):
+#     """Passes input signal through a Nth low pass filter of parameters al and bl."""
+#     signal.filtfilt(b, a, signal)
+#     # print("at lp filter")
+#     return 
 
-def lp_filter(input_signal):
-    """Passes input signal through a Nth low pass filter of parameters al and bl."""
-    # print("at lp filter")
-    return signal.filtfilt(bl, al, input_signal)  
+# def lp_filter(input_signal):
+#     """Passes input signal through a Nth low pass filter of parameters al and bl."""
+#     # print("at lp filter")
+#     return signal.filtfilt(bl, al, input_signal)  
 
-def bp_filter(input_signal):
-    """Passes input signal through a Nth band pass filter of parameters ab and bb."""
-    # print("at bp filter")
-    return signal.filtfilt(bb, ab, input_signal)
+# def bp_filter(input_signal):
+#     """Passes input signal through a Nth band pass filter of parameters ab and bb."""
+#     # print("at bp filter")
+#     return signal.filtfilt(bb, ab, input_signal)
 
-def hp_filter(input_signal):
-    """Passes input signal through a Nth high pass filter of parameters ah and bh."""
-    # print("at hp filter")
-    return signal.filtfilt(bh, ah, input_signal)
+# def hp_filter(input_signal):
+#     """Passes input signal through a Nth high pass filter of parameters ah and bh."""
+#     # print("at hp filter")
+#     return signal.filtfilt(bh, ah, input_signal)
 
 
-def get_volume(signal):
-    """Returns volume (integer) given a signal"""
+def get_volume(audio):
+    """Returns volume (integer) given a audio"""
     # print("at get volume")
-    peak=np.average(np.abs(signal))/10000
+    peak=np.average(np.abs(audio))/10000
     volume=int(peak/1000)
     return volume
 
-def print_volume(signal, signal_label):
+def print_volume(audio, audio_label):
     """Uses get_volume() to print volume in #'s.
-    Can add a signal_label that is printed before the volume."""
+    Can add a audio_label that is printed before the volume."""
     # print("at print volume")
-    bars = "#"*get_volume(signal)
-    print("%s %s"%(signal_label,bars))
+    bars = "#"*get_volume(audio)
+    print("%s %s"%(audio_label,bars))
 
-def get_low_volume(signal):
-    """Gets volume of signal after passing it through a low pass filter"""
-    return get_volume(lp_filter(signal))
+def get_volume_after_filter(audio, b, a):
+    """Gets volume of audio after passing it through a low pass filter"""
+    return get_volume(signal.filtfilt(b, a, audio))
 
-def get_band_volume(signal):
-    """Gets volume of signal after passing it through a band pass filter"""
-    return get_volume(bp_filter(signal))
+def print_volume_after_filter(audio, b, a, audio_label):
+    """Uses get_volume_after_filter() to print volume in #'s.
+    Can add a audio_label that is printed before the volume."""
+    # print("at print volume")
+    bars = "#"*get_volume_after_filter(audio, b, a)
+    print("%s %s"%(audio_label,bars))
 
-def get_high_volume(signal):
-    """Gets volume of signal after passing it through a high pass filter"""
-    return get_volume(hp_filter(signal))
+# def get_low_volume(audio):
+#     """Gets volume of audio after passing it through a low pass filter"""
+#     return get_volume(lp_filter(audio))
+
+# def get_band_volume(audio):
+#     """Gets volume of audio after passing it through a band pass filter"""
+#     return get_volume(bp_filter(audio))
+
+# def get_high_volume(audio):
+#     """Gets volume of audio after passing it through a high pass filter"""
+#     return get_volume(hp_filter(audio))
 
 
 def show_volume_as_colored_bars(volume):

@@ -16,6 +16,7 @@ import sys
 import wave
 import pyaudio
 import numpy as np
+from scipy import signal
 from sense_hat import SenseHat
 from utils import *
 
@@ -28,6 +29,19 @@ sense = SenseHat()
 CHUNK = 2**11
 RATE = wf.getframerate()
 
+# Design filters
+# 600Hz - Low pass cutoff
+# 2500Hz - High pass cutoff
+# 600Hz-2500Hz - Band pass range
+N = 2
+Wnl = 600/RATE
+bl, al = signal.butter(N, Wnl, btype="lowpass")
+Wnh = 2500/RATE
+bh, ah = signal.butter(N, Wnh, btype="highpass")
+Wnb = (Wnl,Wnh)
+bb, ab = signal.butter(N, Wnb, btype="bandpass")
+
+# Start audio stream
 p=pyaudio.PyAudio()
 stream=p.open(format=pyaudio.paInt16,
               channels=wf.getnchannels(),
@@ -42,14 +56,16 @@ while data != '':
     audio_as_np_int = np.frombuffer(data, dtype=np.int)
     data_array = audio_as_np_int.astype(np.float)
 
-    # print_volume(lp_filter(data_array), "low "+str(i))
-    # print_volume(bp_filter(data_array), "band "+str(i))
-    # print_volume(hp_filter(data_array), "high "+str(i))
+    # Print volume in terminal (for debugging)
+    #print_volume_after_filter(data_array, bl, al, "low ")
+    #print_volume_after_filter(data_array, bb, ab, "band ")
+    #print_volume_after_filter(data_array, bh, ah, "high ")
 
-    sense.set_pixels(show_frequency_as_colors(get_low_volume(data_array),
-                    get_band_volume(data_array),
-                    get_high_volume(data_array)))
-    # sense.set_pixels(show_volume_as_colors(get_volume(data_array)))
+    sense.set_pixels(show_frequency_as_colors(
+                    get_volume_after_filter(data_array, bl, al),    #red
+                    get_volume_after_filter(data_array, bh, ah),    #green
+                    get_volume_after_filter(data_array, bb, ab)))   #blue
+    #sense.set_pixels(show_volume_as_colors(get_volume(data_array)))
     data = wf.readframes(CHUNK)
     
 
