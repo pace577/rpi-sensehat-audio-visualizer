@@ -33,13 +33,19 @@ RATE = wf.getframerate()
 # 600Hz - Low pass cutoff
 # 2500Hz - High pass cutoff
 # 600Hz-2500Hz - Band pass range
+
 N = 2
 Wnl = 600/RATE
-bl, al = signal.butter(N, Wnl, btype="lowpass")
+# bl, al = signal.butter(N, Wnl, btype="lowpass")
 Wnh = 2500/RATE
-bh, ah = signal.butter(N, Wnh, btype="highpass")
+# bh, ah = signal.butter(N, Wnh, btype="highpass")
 Wnb = (Wnl,Wnh)
-bb, ab = signal.butter(N, Wnb, btype="bandpass")
+# bb, ab = signal.butter(N, Wnb, btype="bandpass")
+
+# Start AudioVisualizer
+vis = AudioVisualizer(memory=3, max_volume=55)
+# vis.set_filter(Wn=[600/RATE, 2500/RATE, (600/RATE, 2500/RATE)])
+vis.set_filter(N=N,Wn=[Wnl,Wnh,Wnb])
 
 # Start audio stream
 p=pyaudio.PyAudio()
@@ -60,11 +66,13 @@ while data != '':
     #print_volume_after_filter(data_array, bl, al, "low ")
     #print_volume_after_filter(data_array, bb, ab, "band ")
     #print_volume_after_filter(data_array, bh, ah, "high ")
+    vis.print_volume_after_filter(data_array, ["low ", "high ", "band "])
 
-    sense.set_pixels(show_frequency_as_colors(
-                    get_volume_after_filter(data_array, bl, al),    #red
-                    get_volume_after_filter(data_array, bh, ah),    #green
-                    get_volume_after_filter(data_array, bb, ab)))   #blue
+    sense.set_pixels(vis.show_frequency_as_colors(
+                    # get_volume_after_filter(data_array, bl, al),    #red
+                    # get_volume_after_filter(data_array, bh, ah),    #green
+                    # get_volume_after_filter(data_array, bb, ab)))   #blue
+                    data_array))    #red
     #sense.set_pixels(show_volume_as_colors(get_volume(data_array)))
     data = wf.readframes(CHUNK)
     
