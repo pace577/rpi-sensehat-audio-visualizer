@@ -23,23 +23,40 @@ from scipy import signal
 #     return signal.filtfilt(bh, ah, input_signal)
 
 class AudioVisualizer:
-    def __init__(self, max_volume=60, memory=3):
+    def __init__(self, max_volume=60, memory=3, responsiveness=3):
+        """
+        AudioVisualizer class to visualize audio using Raspberry Pi SenseHAT LED grid.
+        - Increasing the Max volume decreases intensity
+        - Increasing memory makes the response smoother (increases width of
+          moving average filter)
+        - Increasing responsiveness increases the weight added to current volume
+          input (amplitude of initial value in the moving average filter)
+         
+         Before using show_frequency_as_colors, you must set a triple filter
+         (consists of a low pass, band pass and a high pass butterworth filter)
+         using set_filter(). 
+
+         No filter is required for show_volume_as_colored_bars() and
+         show_volume_as_colors().
+
+         How it works (taking show_frequency_as_colors() as an example):
+         - get_volume_after_filter calculates volume of the input audio chunk
+         - smoothen_volume() filters the volume signal using a moving average
+           filter
+         - get_intensity_from_volume() returns the intensity value for each of
+           the RGB LEDs in the Sense HAT. This can be given as input to the
+           SenseHAT object in your program.
+        """
         self.a = [0,0,0]
         self.b = [0,0,0]
         self.max_volume = max_volume
         self.memory = memory
         self.volume_array = np.zeros((memory,3))
-        # self.filter_order = filter_order
-        # self.lp_cutoff = lp_cutoff
-        # self.hp_cutoff = hp_cutoff
-        # self.bp_cutoff = (lp_cutoff, hp_cutoff)
+        self.responsiveness = responsiveness
 
-        # filter coefficients
-        # self.bl, self.al = signal.butter(filter_order, self.lp_cutoff, btype="lowpass")
-        # self.bb, self.ab = signal.butter(filter_order, self.bp_cutoff, btype="bandpass")
-        # self.bh, self.ah = signal.butter(filter_order, self.hp_cutoff, btype="highpass")
 
     def set_filter(self, N=3, Wn=[0.01, 0.5, (0.01,0.5)]):
+        """Set single filter or triple filter"""
         if type(Wn) is float:
             self.b, self.a = signal.butter(N, Wn, btype="lowpass")
             self.filter_num = 'single'
@@ -51,9 +68,11 @@ class AudioVisualizer:
         else:
             self.filter_num = None
 
+
     def set_max_volume(self, max_volume):
         """Increasing the max volume decreases the intensity of colors on LED"""
         self.max_volume = max_volume
+
 
     def get_volume(self, audio):
         """Returns volume (integer) given a audio"""
@@ -62,12 +81,14 @@ class AudioVisualizer:
         volume=int(peak/1000)
         return volume
 
+
     def print_volume(self, audio, audio_label):
         """Uses get_volume() to print volume in #'s.
         Can add a audio_label that is printed before the volume."""
         # print("at print volume")
         bars = "#"*self.get_volume(audio)
         print("%s %s"%(audio_label,bars))
+
 
     def get_volume_after_filter(self, audio):
         """Gets volume of audio after passing it through a low pass filter.  
@@ -84,21 +105,6 @@ class AudioVisualizer:
         else:
             return -1
 
-# def get_volume_after_filter(self, audio):
-#     """Gets volume of audio after passing it through a low pass filter.  
-
-#     Inputs: audio signal (mono), numerator (b) and denominator(a) coefficients
-#     of filter.
-#     If b (and a) is a list of coefficients, the function passes the
-#     input audio through a list of corresponding filters and returns a list of
-#     volumes."""
-#     if type(b) is np.ndarray and type(a) is np.ndarray:
-#         return get_volume(signal.filtfilt(b, a, audio))
-#     elif type(b) is list and type(a) is list:
-#         filter_num = len(b)
-#         return [get_volume(signal.filtfilt(b[i], a[i], audio)) for i in range(filter_num)]
-#     else:
-#         return -1
 
     def print_volume_after_filter(self, audio, audio_label):
         """Uses get_volume_after_filter() to print volume(s) in #'s.
@@ -109,7 +115,7 @@ class AudioVisualizer:
                 filter denominator coefficients a (np.ndarray or list of arrays),
                 audio prefix labels to print to console (string or list of strings)
         """
-        # print("at print volume")
+        #print("at print volume")
         volume = self.get_volume_after_filter(audio)
         if self.filter_num == 'single':
             bars = "#"*volume
@@ -122,25 +128,11 @@ class AudioVisualizer:
             return -1
 
 
-# def get_low_volume(audio):
-#     """Gets volume of audio after passing it through a low pass filter"""
-#     return get_volume(lp_filter(audio))
-
-# def get_band_volume(audio):
-#     """Gets volume of audio after passing it through a band pass filter"""
-#     return get_volume(bp_filter(audio))
-
-# def get_high_volume(audio):
-#     """Gets volume of audio after passing it through a high pass filter"""
-#     return get_volume(hp_filter(audio))
-
-
     def show_volume_as_colored_bars(self, audio):
         """Volume visualized as bars of different colors"""
 
         volume = self.get_volume(audio)
-        # volume=np.sum(data_array)/2**22
-        # bars=int(volume/2**10)
+        #volume=np.sum(audio)/2**22
         volume -= 20
 
         black_bar = [[0,0,0]]*8
@@ -172,7 +164,7 @@ class AudioVisualizer:
     def show_volume_as_colors(self, audio):
         """Sets display color accourding to volume level. 
         Returns a list of 64 color lists."""
-        # volume=np.sum(data_array)/2**22
+        #volume=np.sum(audio)/2**22
         volume = 100*self.get_volume(audio)
         red_level = int(volume % 255)
         blue_level = int((volume//2) % 255)
@@ -186,7 +178,6 @@ class AudioVisualizer:
         """Outputs the LED intensity(min 0, max 255) from input volume.
         Max volume can be set (default value is 60). Increasing the max volume 
         will decrease the LED intensity."""
-        # max_volume = 60
         if volume < self.max_volume:
             intensity = (volume * 255) // self.max_volume
         else:
@@ -195,12 +186,18 @@ class AudioVisualizer:
 
 
     def smoothen_volume(self, volume):
+        """This is essentially a moving average filter to the volume signal.
+        Responsiveness is the weight added to current volume input."""
+        volume = np.array(volume)
         self.volume_array = self.volume_array[1:]
-        # print("Volume array after slicing:", self.volume_array)
-        self.volume_array = np.vstack((self.volume_array, np.array(volume)))
-        # print("Volume array after stacking:", self.volume_array)
-        normalized_volume = np.average(self.volume_array, axis=0)
-        # print("Normalized volume: ", normalized_volume)
+        #print("Volume array after slicing:", self.volume_array)
+
+        weight = self.responsiveness #current volume adds extra weight to the visuals
+        normalized_volume = np.average(np.vstack((self.volume_array,weight*volume)), axis=0)
+        #print("Normalized volume: ", normalized_volume)
+
+        self.volume_array = np.vstack((self.volume_array, volume))
+        #print("Volume array after stacking:", self.volume_array)
         return normalized_volume.astype(int)
 
 

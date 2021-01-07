@@ -20,12 +20,14 @@ from scipy import signal
 from sense_hat import SenseHat
 from utils import *
 
+# Path to input audio file. Can also give as argument to the program
 filename = "samples/music.wav"
 if len(sys.argv)>1:
     filename = sys.argv[1]
 wf = wave.open(filename)
 sense = SenseHat()
 
+# The audio is read and processed in chunks
 CHUNK = 2**11
 RATE = wf.getframerate()
 
@@ -36,15 +38,11 @@ RATE = wf.getframerate()
 
 N = 2
 Wnl = 600/RATE
-# bl, al = signal.butter(N, Wnl, btype="lowpass")
 Wnh = 2500/RATE
-# bh, ah = signal.butter(N, Wnh, btype="highpass")
 Wnb = (Wnl,Wnh)
-# bb, ab = signal.butter(N, Wnb, btype="bandpass")
 
-# Start AudioVisualizer
-vis = AudioVisualizer(memory=3, max_volume=55)
-# vis.set_filter(Wn=[600/RATE, 2500/RATE, (600/RATE, 2500/RATE)])
+# AudioVisualizer uses audio data to make LEDs on SenseHAT glow
+vis = AudioVisualizer(memory=5, max_volume=60, responsiveness=4)
 vis.set_filter(N=N,Wn=[Wnl,Wnh,Wnb])
 
 # Start audio stream
@@ -63,16 +61,9 @@ while data != '':
     data_array = audio_as_np_int.astype(np.float)
 
     # Print volume in terminal (for debugging)
-    #print_volume_after_filter(data_array, bl, al, "low ")
-    #print_volume_after_filter(data_array, bb, ab, "band ")
-    #print_volume_after_filter(data_array, bh, ah, "high ")
-    vis.print_volume_after_filter(data_array, ["low ", "high ", "band "])
+    #vis.print_volume_after_filter(data_array, ["low ", "high ", "band "])
 
-    sense.set_pixels(vis.show_frequency_as_colors(
-                    # get_volume_after_filter(data_array, bl, al),    #red
-                    # get_volume_after_filter(data_array, bh, ah),    #green
-                    # get_volume_after_filter(data_array, bb, ab)))   #blue
-                    data_array))    #red
+    sense.set_pixels(vis.show_frequency_as_colors(data_array))
     #sense.set_pixels(show_volume_as_colors(get_volume(data_array)))
     data = wf.readframes(CHUNK)
     
